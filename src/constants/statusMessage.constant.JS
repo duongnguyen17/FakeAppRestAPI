@@ -1,0 +1,7 @@
+module.exports.OK = "OK"
+module.exports.PARAMETER_VALUE_IS_INVALID = "Param is invalid"
+module.exports.USER_EXISTED = "User existed"
+module.exports.UNKNOWN_ERROR = "Unknown error"
+module.exports.PASSWORD_IS_INVALID = "Password is invalid"
+module.exports.ACCOUNT_IS_NOT_SIGNUP = "Account is not signup"
+module.exports.ARE_YOU_HACKER = "hacker?"
