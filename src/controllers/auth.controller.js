@@ -2,6 +2,7 @@ const md5 = require("md5")
 const User = require("../models/user.model.js")
 const jwtHelper = require("../helper/jwt.helper.js")
 const statusMessage = require("../constants/statusMessage.constant.js")
+const statusCode = require("../constants/statusCode.constant.js")
 
 const secretKeyToken = "secretKeyToken"
 //kiem tra sdt
@@ -35,13 +36,28 @@ function validationPasword(password, phonenumber) {
   }
 }
 
+//kiem tra username
+function validationUsername(username) {
+  if (
+    !username ||
+    username.length < 6 ||
+    username.length > 30 ||
+    password.match(/[^a-z|A-Z|0-9]/g)
+  ) {
+    return 1
+  }
+  else {
+    return 0
+  }
+}
+
 //signup
 const signup = async (req, res) => {
   const { phonenumber, password, username } = req.query
   try {
     if (validationPhonenumber(phonenumber) ||
       validationPasword(password, phonenumber) ||
-      !username
+      validationUsername(username)
     ) throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID)
     else {
       const userData = await User.findOne({ phonenumber: phonenumber })
@@ -61,10 +77,13 @@ const signup = async (req, res) => {
         await user.save() //lưu lại
         //trả về response
         return res.status(200).json({
+          code: statusCode.OK,
           message: statusMessage.OK,
           data: {
-            id: user._id,
-            token: accessToken
+            id: userData._id,
+            username: userData.username,
+            token: accessToken,
+            avatar: userData.avatar
           }
         })
       }
@@ -77,17 +96,20 @@ const signup = async (req, res) => {
     switch (error.message) {
       case statusMessage.PARAMETER_VALUE_IS_INVALID:
         return res.status(200).json({
+          code: statusCode.PARAMETER_VALUE_IS_INVALID,
           message: statusMessage.PARAMETER_VALUE_IS_INVALID
         })
 
       case statusMessage.USER_EXISTED:
         return res.status(200).json({
+          code: statusCode.USER_EXISTED,
           message: statusMessage.USER_EXISTED
         })
 
       default:
         return res.status(200).json({
-          message: statusMessage.UNKNOWN_ERROR //req.query
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR
         })
     }
   }
@@ -122,6 +144,7 @@ const login = async (req, res) => {
           )
 
           return res.status(200).json({
+            code: statusCode.OK,
             message: statusMessage.OK,
             data: {
               id: userData._id,
@@ -146,21 +169,25 @@ const login = async (req, res) => {
 
       case statusMessage.PARAMETER_VALUE_IS_INVALID:
         return res.status(200).json({
+          code: statusCode.PARAMETER_VALUE_IS_INVALID,
           message: statusMessage.PARAMETER_VALUE_IS_INVALID
         })
 
       case statusMessage.PASSWORD_IS_INVALID:
         return res.status(200).json({
+          code: statusCode.PASSWORD_IS_INVALID,
           message: statusMessage.PASSWORD_IS_INVALID
         })
 
       case statusMessage.ACCOUNT_IS_NOT_SIGNUP:
         return res.status(200).json({
+          code: statusCode.ACCOUNT_IS_NOT_SIGNUP,
           message: statusMessage.ACCOUNT_IS_NOT_SIGNUP
         })
 
       default:
         return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
           message: statusMessage.UNKNOWN_ERROR
         })
     }
