@@ -1,27 +1,25 @@
-const md5 = require("md5")
-const User = require("../models/user.model.js")
-const jwtHelper = require("../helper/jwt.helper.js")
-const statusMessage = require("../constants/statusMessage.constant.js")
-const statusCode = require("../constants/statusCode.constant.js")
+const md5 = require('md5')
+const User = require('../models/user.model.js')
+const jwtHelper = require('../helper/jwt.helper.js')
+const statusMessage = require('../constants/statusMessage.constant.js')
+const statusCode = require('../constants/statusCode.constant.js')
 
-const secretKeyToken = "secretKeyToken"
-//kiem tra sdt
-function validationPhonenumber(phonenumber) {
+// kiem tra sdt
+function validationPhonenumber (phonenumber) {
   if (
     !phonenumber ||
-    phonenumber.length != 10 ||
-    phonenumber[0] != "0" ||
+    phonenumber.length !== 10 ||
+    phonenumber[0] !== '0' ||
     phonenumber.match(/[^0-9]/g)
   ) {
     return 1
-  }
-  else {
+  } else {
     return 0
   }
 }
 
-//kiem tra password
-function validationPasword(password, phonenumber) {
+// kiem tra password
+function validationPasword (password, phonenumber) {
   if (
     !password ||
     password.length < 6 ||
@@ -30,64 +28,61 @@ function validationPasword(password, phonenumber) {
     password.match(/[^a-z|A-Z|0-9]/g)
   ) {
     return 1
-  }
-  else {
+  } else {
     return 0
   }
 }
 
-//kiem tra username
-function validationUsername(username) {
+// kiem tra username
+function validationUsername (username) {
   if (
     !username ||
     username.length < 6 ||
     username.length > 30 ||
-    password.match(/[^a-z|A-Z|0-9]/g)
+    username.match(/[^a-z|A-Z|0-9]/g)
   ) {
     return 1
-  }
-  else {
+  } else {
     return 0
   }
 }
 
-//signup
+// signup
 const signup = async (req, res) => {
   const { phonenumber, password, username } = req.query
   try {
     if (validationPhonenumber(phonenumber) ||
       validationPasword(password, phonenumber) ||
       validationUsername(username)
-    ) throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID)
-    else {
+    ) { throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID) } else {
       const userData = await User.findOne({ phonenumber: phonenumber })
-      //nếu người dùng chưa đăng kí
+      // nếu người dùng chưa đăng kí
       if (!userData) {
-        const hashedPassword = md5(password) //mã hóa passowrd trước khi lưu
+        const hashedPassword = md5(password) // mã hóa passowrd trước khi lưu
         const user = new User({
           phonenumber: phonenumber,
           password: hashedPassword,
-          username: username
+          username: username,
+          avatar: null
         })
         const accessToken = await jwtHelper.generateToken(
-          { _id: user._id, phonenumber: user.phonenumber },
-          secretKeyToken
+          { _id: user._id, phonenumber: user.phonenumber }
         )
         user.token = accessToken
-        await user.save() //lưu lại
-        //trả về response
+        await user.save() // lưu lại
+        // trả về response
         return res.status(200).json({
           code: statusCode.OK,
           message: statusMessage.OK,
           data: {
-            id: userData._id,
-            username: userData.username,
-            token: accessToken,
-            avatar: userData.avatar
+            id: user._id,
+            username: user.username,
+            token: user.token,
+            avatar: user.avatar
           }
         })
-      }
-      else //nếu người dùng đăng kí rồi
+      } else // nếu người dùng đăng kí rồi
+      // eslint-disable-next-line brace-style
       {
         throw Error(statusMessage.USER_EXISTED)
       }
@@ -115,25 +110,22 @@ const signup = async (req, res) => {
   }
 }
 
-//login
+// login
 const login = async (req, res) => {
   const { phonenumber, password } = req.query
   try {
-    if (validationPhonenumber(phonenumber) || validationPasword(password))
-      throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID)
-    else {
+    if (validationPhonenumber(phonenumber) || validationPasword(password)) { throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID) } else {
       const userData = await User.findOne({ phonenumber: phonenumber })
-      //nếu tồn tại người dùng
+      // nếu tồn tại người dùng
       if (userData) {
         const hashedPassword = md5(password)
-        //nếu đúng password
-        if (hashedPassword == userData.password) {
-          //tạo token
+        // nếu đúng password
+        if (hashedPassword === userData.password) {
+          // tạo token
           const accessToken = await jwtHelper.generateToken(
-            { _id: userData._id, phonenumber: userData.phonenumber },
-            secretKeyToken
+            { _id: userData._id, phonenumber: userData.phonenumber }
           )
-          //lưu token vào database
+          // lưu token vào database
           await User.findOneAndUpdate(
             { _id: userData._id },
             {
@@ -153,20 +145,21 @@ const login = async (req, res) => {
               avatar: userData.avatar
             }
           })
+        // eslint-disable-next-line brace-style
         }
-        //nếu sai password
+        // nếu sai password
         else {
           throw Error(statusMessage.PASSWORD_IS_INVALID)
         }
+      // eslint-disable-next-line brace-style
       }
-      //nếu chưa đăng kí
+      // nếu chưa đăng kí
       else {
         throw Error(statusMessage.ACCOUNT_IS_NOT_SIGNUP)
       }
     }
   } catch (error) {
     switch (error.message) {
-
       case statusMessage.PARAMETER_VALUE_IS_INVALID:
         return res.status(200).json({
           code: statusCode.PARAMETER_VALUE_IS_INVALID,
