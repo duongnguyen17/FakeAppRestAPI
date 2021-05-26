@@ -28,6 +28,7 @@ const verifyToken = async (token) => {
     const decode = await jwt.decode(token, secretKeyToken)
     return decode
   } catch (error) {
+    console.log(`error`, error)
     console.log(error)
   }
 }

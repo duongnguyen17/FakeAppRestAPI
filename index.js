@@ -1,9 +1,9 @@
 const express = require('express')
-var bodyParser = require('body-parser')
+// var bodyParser = require('body-parser')
 const app = express()
-var jsonParser = bodyParser.json()
-var urlencodedParser = bodyParser.urlencoded({ extended: false })
-app.use(bodyParser.json({ type: 'application/*+json' }))
+// var jsonParser = bodyParser.json()
+// var urlencodedParser = bodyParser.urlencoded({ extended: false })
+// app.use(bodyParser.json({ type: 'application/*+json' }))
 const mongoose = require('mongoose')
 const port = 3000
 app.use(express.json()) // for parsing application/json
