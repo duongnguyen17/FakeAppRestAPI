@@ -72,7 +72,6 @@ const getUserInfor = async (req, res) => {
         };
         isOwner = false;
       }
-      
 
       return res.status(200).json({
         code: statusCode.OK,
@@ -132,11 +131,26 @@ const changeUserInfor = async (req, res) => {
     } else {
       await User.findByIdAndUpdate(decode.data._id, {
         $set: {
-          username: username == null ? userData.username : username,
-          born: born == null ? userData.born : born,
-          homeTown: homeTown == null ? userData.homeTown : homeTown,
-          address: address == null ? userData.address : address,
-          intro: intro == null ? userData.intro : intro,
+          username:
+            username == null || username == undefined || username == ""
+              ? userData.username
+              : username,
+          born:
+            born == null || born == undefined || born == ""
+              ? userData.born
+              : born,
+          homeTown:
+            homeTown == null || homeTown == undefined || homeTown == ""
+              ? userData.homeTown
+              : homeTown,
+          address:
+            address == null || address == undefined || address == ""
+              ? userData.address
+              : address,
+          intro:
+            intro == null || intro == undefined || intro == ""
+              ? userData.intro
+              : intro,
         },
       });
     }

@@ -45,22 +45,23 @@ const addPost = async (req, res) => {
         interestedNum: 0,
         commentNum: 0,
       });
-      let author = await User.findById(decode.data._id);
-      post.authorName = author.username;
-      post.authorAvatar = author.avatar;
       await post.save();
       await User.findByIdAndUpdate(decode.data._id, {
         $push: {
           posts: post._id,
         },
       });
+      let author = await User.findById(decode.data._id);
+      post._doc.authorName = author.username;
+      post._doc.authorAvatar = author.avatar;
+      console.log(`post`, post);
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
         data: post,
       });
     } else {
-      const post = new Post({
+      let post = new Post({
         authorId: decode.data._id,
         described: described,
         created: Date.now(),
@@ -74,6 +75,10 @@ const addPost = async (req, res) => {
           posts: post._id,
         },
       });
+      let author = await User.findById(decode.data._id);
+      post._doc.authorName = author.username;
+      post._doc.authorAvatar = author.avatar;
+      console.log(`post`, post);
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -257,16 +262,19 @@ const deletePost = async (req, res) => {
 const getPost = async (req, res) => {
   const { postId } = req.query;
   try {
-    const postData = await Post.findById(postId);
+    let postData = await Post.findById(postId);
     let commentList = await Promise.all(
       postData.commentList.map(async (element) => {
-        const commentData = await Comment.findById(element);
+        let commentData = await Comment.findById(element);
+        let author = await User.findById(commentData.authorId);
+        commentData._doc.authorName = author.username;
+        commentData._doc.authorAvatar = author.avatar;
         return commentData;
       })
     );
     let interestedList = await Promise.all(
       postData.interestedList.map(async (element) => {
-        const authorData = await User.findById(element);
+        let authorData = await User.findById(element);
         return {
           _id: element,
           username: authorData.username,
@@ -276,6 +284,9 @@ const getPost = async (req, res) => {
     );
     postData._doc.commentList = commentList;
     postData._doc.interestedList = interestedList;
+    let author = await User.findById(postData.authorId);
+    postData._doc.authorName = author.username;
+    postData._doc.authorAvatar = author.avatar;
     return res.status(200).json({
       code: statusCode.OK,
       message: statusMessage.OK,
@@ -298,7 +309,15 @@ const getListPosts = async (req, res) => {
 
     if (userId == null || userId == "" || userId == undefined) {
       let data = await Post.find({}, null, { sort: { created: -1 } });
-      let result = data.slice(index, index + count);
+      let temp = data.slice(index, index + count);
+      let result = await Promise.all(
+        temp.map(async (value, index) => {
+          let author = await User.findById(value.authorId);
+          value._doc.authorName = author.username;
+          value._doc.authorAvatar = author.avatar;
+          return value;
+        })
+      );
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -308,7 +327,15 @@ const getListPosts = async (req, res) => {
       let data = await Post.find({ authorId: userId }, null, {
         sort: { created: -1 },
       });
-      let result = data.slice(index, index + count);
+      let temp = data.slice(index, index + count);
+      let result = await Promise.all(
+        temp.map(async (value, index) => {
+          let author = await User.findById(value.authorId);
+          value._doc.authorName = author.username;
+          value._doc.authorAvatar = author.avatar;
+          return value;
+        })
+      );
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -369,14 +396,13 @@ const interestedPost = async (req, res) => {
       });
     }
     postData = await Post.findById(postId);
-    let user = await User.findById(decode.data._id);
     return res.status(200).json({
       code: statusCode.OK,
       message: statusMessage.OK,
       data: {
-        _id: decode.data._id,
-        username: user.username,
-        avatar: user.avatar,
+        _id: postId,
+        interestedList: postData.interestedList,
+        interestedNum: postData.interestedNum,
       },
     });
   } catch (error) {
@@ -469,8 +495,6 @@ const commentPost = async (req, res) => {
       let comment = new Comment({
         postId: postId,
         authorId: decode.data._id,
-        authorName: author.username,
-        authorAvatar: author.avatar,
         described: described,
         image: result,
         created: Date.now(),
@@ -483,16 +507,17 @@ const commentPost = async (req, res) => {
         code: statusCode.OK,
         message: statusMessage.OK,
         data: {
-          id: comment._id,
-          postId: postId,
-          described: described,
-          image: result,
-          created: comment.created,
-          author: {
-            id: author._id,
-            avatar: author.avatar,
-            username: author.username,
+          comment: {
+            id: comment._id,
+            postId: postId,
+            described: described,
+            image: result,
+            created: comment.created,
+            authorId: author._id,
+            authorAvatar: author.avatar,
+            authorName: author.username,
           },
+          commentNum: post.commentNum,
         },
       });
     } else {
@@ -510,14 +535,15 @@ const commentPost = async (req, res) => {
         code: statusCode.OK,
         message: statusMessage.OK,
         data: {
-          id: comment._id,
-          described: described,
-          created: comment.created,
-          author: {
-            id: author._id,
-            avatar: author.avatar,
-            username: author.username,
+          comment: {
+            id: comment._id,
+            described: described,
+            created: comment.created,
+            authorId: author._id,
+            authorAvatar: author.avatar,
+            authorName: author.username,
           },
+          commentNum: post.commentNum,
         },
       });
     }
@@ -686,6 +712,31 @@ const editComment = async (req, res) => {
   }
 };
 
+const getListComments = async (req, res) => {
+  let { postId } = req.query;
+  try {
+    const postData = await Post.findById(postId);
+    let commentList = await Promise.all(
+      postData.commentList.map(async (element) => {
+        const commentData = await Comment.findById(element);
+        return commentData;
+      })
+    );
+    return res.status(200).json({
+      code: statusCode.OK,
+      message: statusMessage.OK,
+      data: commentList,
+    });
+  } catch (error) {
+    switch (error) {
+      default:
+        return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR,
+        });
+    }
+  }
+};
 const getPostWithTag = async (req, res) => {
   let { tag, index } = req.query;
   const count = 20;
@@ -720,5 +771,6 @@ module.exports = {
   interestedPost, //
   commentPost, //
   getListInterested, //
+  getListComments,
   getPostWithTag, //chưa được
 };
