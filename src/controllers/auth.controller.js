@@ -25,7 +25,7 @@ function validationPasword(password, phonenumber) {
     password.length < 6 ||
     password.length > 50 ||
     password === phonenumber ||
-    password.match(/[^a-z|A-Z|0-9]/g)
+    !password.match(/^[a-zA-Z0-9]*$/)
   ) {
     return 0;
   } else {
@@ -39,7 +39,7 @@ function validationUsername(username) {
     !username ||
     username.length < 6 ||
     username.length > 30 ||
-    username.match(/^[a-zA-Z0-9_ ]*$/)
+    !username.match(/^[a-zA-Z0-9_ ]*$/)
   ) {
     return 0;
   } else {
@@ -51,12 +51,12 @@ function validationUsername(username) {
 const signup = async (req, res) => {
   const { phonenumber, password, username } = req.query;
   try {
-    if (
-      !validationPhonenumber(phonenumber) ||
-      !validationPasword(password, phonenumber) ||
-      !validationUsername(username)
-    ) {
-      throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID);
+    if (!validationPhonenumber(phonenumber)) {
+      throw Error(statusMessage.PHONENUMBER_IS_INVALID);
+    } else if (!validationPasword(password, phonenumber)) {
+      throw Error(statusMessage.PASSWORD_IS_INVALID);
+    } else if (!validationUsername(username)) {
+      throw Error(statusMessage.USERNAME_IS_INVALID);
     } else {
       const userData = await User.findOne({ phonenumber: phonenumber });
       // nếu người dùng chưa đăng kí
@@ -98,10 +98,20 @@ const signup = async (req, res) => {
     }
   } catch (error) {
     switch (error.message) {
-      case statusMessage.PARAMETER_VALUE_IS_INVALID:
+      case statusMessage.PHONENUMBER_IS_INVALID:
         return res.status(200).json({
-          code: statusCode.PARAMETER_VALUE_IS_INVALID,
-          message: statusMessage.PARAMETER_VALUE_IS_INVALID,
+          code: statusCode.PHONENUMBER_IS_INVALID,
+          message: statusMessage.PHONENUMBER_IS_INVALID,
+        });
+      case statusMessage.PASSWORD_IS_INVALID:
+        return res.status(200).json({
+          code: statusCode.PASSWORD_IS_INVALID,
+          message: statusMessage.PASSWORD_IS_INVALID,
+        });
+      case statusMessage.USERNAME_IS_INVALID:
+        return res.status(200).json({
+          code: statusCode.USERNAME_IS_INVALID,
+          message: statusMessage.USERNAME_IS_INVALID,
         });
 
       case statusMessage.USER_EXISTED:
@@ -123,8 +133,10 @@ const signup = async (req, res) => {
 const login = async (req, res) => {
   const { phonenumber, password } = req.query;
   try {
-    if (!validationPhonenumber(phonenumber) || !validationPasword(password)) {
-      throw Error(statusMessage.PARAMETER_VALUE_IS_INVALID);
+    if (!validationPhonenumber(phonenumber)) {
+      throw Error(statusMessage.PHONENUMBER_IS_INVALID);
+    } else if (!validationPasword(password)) {
+      throw Error(statusMessage.PASSWORD_IS_INVALID);
     } else {
       const userData = await User.findOne({ phonenumber: phonenumber });
       // nếu tồn tại người dùng
@@ -161,7 +173,7 @@ const login = async (req, res) => {
         }
         // nếu sai password
         else {
-          throw Error(statusMessage.PASSWORD_IS_INVALID);
+          throw Error(statusMessage.WRONG_PASSWORD);
         }
         // eslint-disable-next-line brace-style
       }
@@ -172,16 +184,20 @@ const login = async (req, res) => {
     }
   } catch (error) {
     switch (error.message) {
-      case statusMessage.PARAMETER_VALUE_IS_INVALID:
+      case statusMessage.PHONENUMBER_IS_INVALID:
         return res.status(200).json({
-          code: statusCode.PARAMETER_VALUE_IS_INVALID,
-          message: statusMessage.PARAMETER_VALUE_IS_INVALID,
+          code: statusCode.PHONENUMBER_IS_INVALID,
+          message: statusMessage.PHONENUMBER_IS_INVALID,
         });
-
       case statusMessage.PASSWORD_IS_INVALID:
         return res.status(200).json({
           code: statusCode.PASSWORD_IS_INVALID,
           message: statusMessage.PASSWORD_IS_INVALID,
+        });
+      case statusMessage.WRONG_PASSWORD:
+        return res.status(200).json({
+          code: statusCode.WRONG_PASSWORD,
+          message: statusMessage.WRONG_PASSWORD,
         });
 
       case statusMessage.ACCOUNT_IS_NOT_SIGNUP:
