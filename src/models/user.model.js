@@ -22,13 +22,28 @@ const userSchema = new mongoose.Schema({
       ref: "post",
     },
   ],
+  //danh sách user mà người dùng theo dõi
   followList: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
     },
   ],
+  //danh sách user follow người dùng
+  follower: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+    },
+  ],
   followNum: Number,
+  notification: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "notification" },
+      isSeen: Boolean,
+    },
+  ],
+  notificationUnseen: Number, //số thông báo chưa xem
 });
 
 const User = mongoose.model("user", userSchema);

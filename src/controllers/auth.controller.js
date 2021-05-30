@@ -39,7 +39,7 @@ function validationUsername(username) {
     !username ||
     username.length < 6 ||
     username.length > 30 ||
-    !username.match(/^[a-zA-Z0-9_ ]*$/)
+    username.match(/^[a-zA-Z0-9_ ]*$/)
   ) {
     return 0;
   } else {
@@ -72,6 +72,7 @@ const signup = async (req, res) => {
           intro: null,
           avatar: null,
           followNum: 0,
+          notificationUnseen: 0,
         });
         const accessToken = await jwtHelper.generateToken({
           _id: user._id,

@@ -5,6 +5,7 @@ const statusCode = require("../constants/statusCode.constant.js");
 const cloud = require("../helper/cloudinary.helper");
 const { decode } = require("jsonwebtoken");
 const Post = require("../models/post.model.js");
+const Notification = require("../models/notification.model");
 
 // logout
 const logout = async (req, res) => {
@@ -222,6 +223,9 @@ const followOther = async (req, res) => {
         $set: {
           followNum: userData.followNum - 1,
         },
+        $pull: {
+          follower: decode.data._id,
+        },
       });
     } else {
       await User.findByIdAndUpdate(decode.data._id, {
@@ -232,6 +236,9 @@ const followOther = async (req, res) => {
       await User.findByIdAndUpdate(userId, {
         $set: {
           followNum: userData.followNum + 1,
+        },
+        $push: {
+          follower: decode.data._id,
         },
       });
     }
@@ -293,6 +300,98 @@ const getListFollow = async (req, res) => {
     }
   }
 };
+//get notification
+const getNotification = async (req, res) => {
+  const { token } = req.query;
+  try {
+    const decode = await jwtHelper.verifyToken(token);
+    const user = await User.findById(decode.data._id);
+    const notifications = await Promise.all(
+      user.notification.map(async (value) => {
+        let notidata = await Notification.findById(value._id);
+        return { notification: notidata, isSeen: value.isSeen };
+      })
+    );
+    return res.status(200).json({
+      code: statusCode.OK,
+      message: statusMessage.OK,
+      data: notifications,
+    });
+  } catch (error) {
+    switch (error) {
+      default:
+        return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR,
+        });
+    }
+  }
+};
+
+const seeNotification = async (req, res) => {
+  const { token, notificationId } = req.query;
+  try {
+    const decode = await jwtHelper.verifyToken(token);
+    const user = await User.findById(decode.data._id);
+    let tempNotification = await Promise.all(
+      user.notification.map(async (element) => {
+        if (element._id == notificationId) {
+          if (!element.isSeen) {
+            await User.findByIdAndUpdate(decode.data._id, {
+              $set: {
+                notificationUnseen: user.notificationUnseen - 1,
+              },
+            });
+            element.isSeen = true;
+          }
+        }
+        return element;
+      })
+    );
+
+    await User.findByIdAndUpdate(decode.data._id, {
+      $set: {
+        notification: tempNotification,
+      },
+    });
+
+    return res.status(200).json({
+      code: statusCode.OK,
+      message: statusMessage.OK,
+    });
+  } catch (error) {
+    switch (error) {
+      default:
+        return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR,
+        });
+    }
+  }
+};
+//lấy số thông báo chưa đọc
+const getNotificationUnseen = async (req, res) => {
+  const { token } = req.query;
+  try {
+    const decode = await jwtHelper.verifyToken(token);
+    const userData = await User.findById(decode.data._id);
+    return res.status(200).json({
+      code: statusCode.OK,
+      message: statusMessage.OK,
+      data: {
+        notificationUnseen: userData.notificationUnseen,
+      },
+    });
+  } catch (error) {
+    switch (error) {
+      default:
+        return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR,
+        });
+    }
+  }
+};
 module.exports = {
   logout,
   getUserInfor, //
@@ -300,4 +399,7 @@ module.exports = {
   getListInterested,
   followOther,
   getListFollow,
+  getNotification,
+  seeNotification,
+  getNotificationUnseen,
 };

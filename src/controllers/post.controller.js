@@ -5,7 +5,7 @@ const statusCode = require("../constants/statusCode.constant.js");
 const User = require("../models/user.model");
 const jwtHelper = require("../helper/jwt.helper");
 const cloud = require("../helper/cloudinary.helper");
-
+const Notification = require("../models/notification.model");
 // add_post
 const addPost = async (req, res) => {
   const image = req.files;
@@ -46,15 +46,32 @@ const addPost = async (req, res) => {
         commentNum: 0,
       });
       await post.save();
+      //tạo thông báo
+      let notification = new Notification({
+        postId: post._id,
+        authorId: decode.data._id,
+        described: "đã tạo bài viết mới",
+        created: Date.now(),
+      });
+      await notification.save(); //lưu thông báo
+
       await User.findByIdAndUpdate(decode.data._id, {
         $push: {
           posts: post._id,
         },
       });
+
       let author = await User.findById(decode.data._id);
       post._doc.authorName = author.username;
       post._doc.authorAvatar = author.avatar;
-      console.log(`post`, post);
+      //thêm thông báo cho follower
+      author.follower.forEach(async (_id) => {
+        let userData = await User.findById(_id);
+        userData.notification.push({ _id: notification._id, isSeen: false });
+        userData.notificationUnseen++;
+        await userData.save();
+      });
+      //console.log(`post`, post);
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -70,6 +87,14 @@ const addPost = async (req, res) => {
         commentNum: 0,
       });
       await post.save();
+      //tạo thông báo
+      let notification = new Notification({
+        postId: post._id,
+        authorId: decode.data._id,
+        described: "đã tạo bài viết mới",
+        created: Date.now(),
+      });
+      await notification.save(); //lưu thông báo
       await User.findByIdAndUpdate(decode.data._id, {
         $push: {
           posts: post._id,
@@ -78,7 +103,15 @@ const addPost = async (req, res) => {
       let author = await User.findById(decode.data._id);
       post._doc.authorName = author.username;
       post._doc.authorAvatar = author.avatar;
-      console.log(`post`, post);
+      //thêm thông báo cho follower
+      //thêm thông báo cho follower
+      author.follower.forEach(async (_id) => {
+        let userData = await User.findById(_id);
+        userData.notification.push({ _id: notification._id, isSeen: false });
+        userData.notificationUnseen++;
+        await userData.save();
+      });
+      //console.log(`post`, post);
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -142,6 +175,22 @@ const editPost = async (req, res) => {
       });
       postData._doc.described = described;
     }
+
+    //tạo thông báo
+    let notification = new Notification({
+      postId: postId,
+      authorId: decode.data._id,
+      described: "đã cập nhật bài viết",
+      created: Date.now(),
+    });
+    await notification.save(); //lưu thông báo
+    //thêm thông báo cho commenter
+    postData.commenterId.forEach(async (_id) => {
+      let userData = await User.findById(_id);
+      userData.notification.push({ _id: notification._id, isSeen: false });
+      userData.notificationUnseen++;
+      await userData.save();
+    });
     return res.status(200).json({
       code: statusCode.OK,
       message: statusMessage.OK,
@@ -189,7 +238,22 @@ const closePost = async (req, res) => {
         },
       });
 
-      postData.isClosed = !postData.isClosed;
+      postData._doc.isClosed = !postData.isClosed;
+      //tạo thông báo
+      let notification = new Notification({
+        postId: postId,
+        authorId: decode.data._id,
+        described: postData.isClosed ? "đã đóng bài viết" : "đã mở bài viết",
+        created: Date.now(),
+      });
+      await notification.save(); //lưu thông báo
+      //thêm thông báo cho commenter
+      postData.commenterId.forEach(async (_id) => {
+        let userData = await User.findById(_id);
+        userData.notification.push({ _id: notification._id, isSeen: false });
+        userData.notificationUnseen++;
+        await userData.save();
+      });
 
       return res.status(200).json({
         code: statusCode.OK,
@@ -394,6 +458,19 @@ const interestedPost = async (req, res) => {
           interestedList: postId,
         },
       });
+      //tạo thông báo
+      let notification = new Notification({
+        postId: postId,
+        authorId: decode.data._id,
+        described: "đã quan tâm bài viết của bạn",
+        created: Date.now(),
+      });
+      await notification.save(); //lưu thông báo
+      //thêm thông báo cho author
+      let authorData = await User.findById(postData.authorId);
+      authorData.notification.push({ _id: notification._id, isSeen: false });
+      authorData.notificationUnseen++;
+      await authorData.save();
     }
     postData = await Post.findById(postId);
     return res.status(200).json({
@@ -502,7 +579,49 @@ const commentPost = async (req, res) => {
       await comment.save();
       post.commentNum++;
       post.commentList.push(comment._id);
+      if (!post.commenterId.includes(decode.data._id))
+        post.commenterId.push(decode.data._id);
       await post.save();
+
+      let authorData = await User.findById(post.authorId);
+      //tạo thông báo cho author
+      if (decode.data._id != post.authorId) {
+        let notificationAuthor = new Notification({
+          postId: postId,
+          authorId: decode.data._id,
+          described: "đã bình luận bài viết của bạn",
+          created: Date.now(),
+        });
+        await notificationAuthor.save(); //lưu thông báo
+        //thêm thông báo cho author
+
+        authorData.notification.push({
+          _id: notificationAuthor._id,
+          isSeen: false,
+        });
+        authorData.notificationUnseen++;
+        await authorData.save();
+      }
+      //tạo thông báo cho commenter
+      let notificationCommenter = new Notification({
+        postId: postId,
+        authorId: decode.data._id,
+        described: `đã bình luận bài viết của ${authorData.username} mà bạn cũng bình luận`,
+        created: Date.now(),
+      });
+      await notificationCommenter.save(); //lưu thông báo
+      //thêm thông báo cho commenter
+      post.commenterId.forEach(async (_id) => {
+        if (_id != decode.data._id) {
+          let userData = await User.findById(_id);
+          userData.notification.push({
+            _id: notificationCommenter._id,
+            isSeen: false,
+          });
+          userData.notificationUnseen++;
+          await userData.save();
+        }
+      });
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,
@@ -531,6 +650,19 @@ const commentPost = async (req, res) => {
       post.commentNum++;
       post.commentList.push(comment._id);
       await post.save();
+      //tạo thông báo
+      let notification = new Notification({
+        postId: postId,
+        authorId: decode.data._id,
+        described: "đã quan tâm bài viết của bạn",
+        created: Date.now(),
+      });
+      await notification.save(); //lưu thông báo
+      //thêm thông báo cho author
+      let authorData = await User.findByIdAndUpdate(postData.authorId);
+      authorData.notification.push({ _id: notification._id, isSeen: false });
+      authorData.notificationUnseen++;
+      await authorData.save();
       return res.status(200).json({
         code: statusCode.OK,
         message: statusMessage.OK,

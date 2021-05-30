@@ -27,6 +27,7 @@ const postSchema = new mongoose.Schema({
       ref: "comment",
     },
   ],
+  commenterId: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],
   tag: [String],
 });
 
