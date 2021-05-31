@@ -128,13 +128,13 @@ const addPost = async (req, res) => {
 
 // edit_post
 const editPost = async (req, res) => {
-  console.log("object");
+  //console.log("object");
   const { token, postId } = req.query;
   const image = req.files;
   const { described } = req.body;
   try {
     let postData = await Post.findById(postId);
-    console.log(`postData`, postData);
+    //console.log(`postData`, postData);
     //nếu không tồn tại comment đó
     if (!postData) {
       throw Error(statusMessage.POST_IS_NOT_EXIST);
@@ -180,7 +180,7 @@ const editPost = async (req, res) => {
     let notification = new Notification({
       postId: postId,
       authorId: decode.data._id,
-      described: "đã cập nhật bài viết",
+      described: "đã cập nhật bài viết mà bạn đã bình luận",
       created: Date.now(),
     });
     await notification.save(); //lưu thông báo
@@ -606,7 +606,7 @@ const commentPost = async (req, res) => {
       let notificationCommenter = new Notification({
         postId: postId,
         authorId: decode.data._id,
-        described: `đã bình luận bài viết của ${authorData.username} mà bạn cũng bình luận`,
+        described: `đã bình luận bài viết của <Text style={{fontWeight: 'bold'}}>${authorData.username}</Text>{' '}mà bạn cũng bình luận`,
         created: Date.now(),
       });
       await notificationCommenter.save(); //lưu thông báo
@@ -851,6 +851,9 @@ const getListComments = async (req, res) => {
     let commentList = await Promise.all(
       postData.commentList.map(async (element) => {
         const commentData = await Comment.findById(element);
+        let author = await User.findById(commentData.authorId);
+        commentData._doc.authorName = author.username;
+        commentData._doc.authorAvatar = author.avatar;
         return commentData;
       })
     );
@@ -864,7 +867,7 @@ const getListComments = async (req, res) => {
       default:
         return res.status(200).json({
           code: statusCode.UNKNOWN_ERROR,
-          message: statusMessage.UNKNOWN_ERROR,
+          message: error.message,
         });
     }
   }

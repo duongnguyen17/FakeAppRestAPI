@@ -14,4 +14,5 @@ route.post("/follow_other", user.followOther);
 route.get("/get_notification", user.getNotification);
 route.post("/see_notification", user.seeNotification);
 route.get("/get_notificationUnseen", user.getNotificationUnseen);
+route.post("/see_all_notificationUnseen", user.seeAllNotificationUnseen)
 module.exports = route;

@@ -302,14 +302,24 @@ const getListFollow = async (req, res) => {
 };
 //get notification
 const getNotification = async (req, res) => {
-  const { token } = req.query;
+  let { token, index } = req.query;
+  const count = 30;
   try {
+    if (index == null || index == "") index = 0;
     const decode = await jwtHelper.verifyToken(token);
-    const user = await User.findById(decode.data._id);
+    const userData = await User.findById(decode.data._id);
+    const length = userData.notification.length;
+    let allNoti = userData.notification
+      .slice(length - count * (index + 1), length - count * index)
+      .reverse();
+
     const notifications = await Promise.all(
-      user.notification.map(async (value) => {
-        let notidata = await Notification.findById(value._id);
-        return { notification: notidata, isSeen: value.isSeen };
+      allNoti.map(async (value) => {
+        let notiData = await Notification.findById(value._id);
+        let authorData = await User.findById(notiData.authorId);
+        notiData._doc.authorAvatar = authorData.avatar;
+        notiData._doc.authorName = authorData.username;
+        return { notification: notiData, isSeen: value.isSeen };
       })
     );
     return res.status(200).json({
@@ -322,7 +332,7 @@ const getNotification = async (req, res) => {
       default:
         return res.status(200).json({
           code: statusCode.UNKNOWN_ERROR,
-          message: statusMessage.UNKNOWN_ERROR,
+          message: error.message,
         });
     }
   }
@@ -392,6 +402,33 @@ const getNotificationUnseen = async (req, res) => {
     }
   }
 };
+//đánh dấu tất cả là đã đọc
+const seeAllNotificationUnseen = async (req, res) => {
+  const { token } = req.query;
+  try {
+    const decode = await jwtHelper.verifyToken(token);
+    const userData = await User.findById(decode.data._id);
+
+    userData.notification = userData.notification.map((noti) => {
+      noti.isSeen = true;
+      return noti;
+    });
+    userData.notificationUnseen = 0;
+    await userData.save();
+    return res.status(200).json({
+      code: statusCode.OK,
+      message: statusMessage.OK,
+    });
+  } catch (error) {
+    switch (error) {
+      default:
+        return res.status(200).json({
+          code: statusCode.UNKNOWN_ERROR,
+          message: statusMessage.UNKNOWN_ERROR,
+        });
+    }
+  }
+};
 module.exports = {
   logout,
   getUserInfor, //
@@ -402,4 +439,5 @@ module.exports = {
   getNotification,
   seeNotification,
   getNotificationUnseen,
+  seeAllNotificationUnseen,
 };
