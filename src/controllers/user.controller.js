@@ -57,10 +57,20 @@ const getUserInfor = async (req, res) => {
       const decode = await jwtHelper.verifyToken(token);
       let data = null;
       let isOwner = null;
+      let isFollow = false;
+
       if (decode.data._id == userId) {
         data = userData;
         isOwner = true;
+        isFollow = true;
       } else {
+        userData.follower.forEach((element) => {
+          //console.log("object");
+          if (decode.data._id == element) {
+            isFollow = true;
+          }
+        });
+        isOwner = false;
         data = {
           posts: userData.posts,
           _id: userData._id,
@@ -69,9 +79,9 @@ const getUserInfor = async (req, res) => {
           homeTown: userData.homeTown,
           address: userData.address,
           intro: userData.intro,
+          followNum: userData.followNum,
           avatar: userData.avatar,
         };
-        isOwner = false;
       }
 
       return res.status(200).json({
@@ -80,6 +90,7 @@ const getUserInfor = async (req, res) => {
         data: {
           userData: data,
           isOwner: isOwner,
+          isFollow: isFollow,
         },
       });
     }
