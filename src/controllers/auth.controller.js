@@ -25,7 +25,7 @@ function validationPasword(password, phonenumber) {
     password.length < 6 ||
     password.length > 50 ||
     password === phonenumber ||
-    !password.match(/^[a-zA-Z0-9]*$/)
+    !password.match(/[a-zA-Z0-9]/g)
   ) {
     return false;
   } else {
@@ -39,9 +39,9 @@ function validationUsername(username) {
     !username ||
     username.length < 6 ||
     username.length > 30 ||
-    !username.match(/^[a-zA-Z0-9_ ]*$/)
+    !username.match(/[^a-zA-Z0-9_ ]/g)
   ) {
-    return fasle;
+    return false;
   } else {
     return true;
   }
@@ -59,6 +59,7 @@ const signup = async (req, res) => {
       throw Error(statusMessage.USERNAME_IS_INVALID);
     } else {
       const userData = await User.findOne({ phonenumber: phonenumber });
+      console.log(`userData`, userData)
       // nếu người dùng chưa đăng kí
       if (!userData) {
         const hashedPassword = md5(password); // mã hóa passowrd trước khi lưu
@@ -124,7 +125,8 @@ const signup = async (req, res) => {
       default:
         return res.status(200).json({
           code: statusCode.UNKNOWN_ERROR,
-          message: statusMessage.UNKNOWN_ERROR,
+          // message: statusMessage.UNKNOWN_ERROR,
+          message: error.message
         });
     }
   }
