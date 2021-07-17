@@ -10,11 +10,11 @@ function validationPhonenumber(phonenumber) {
     !phonenumber ||
     phonenumber.length !== 10 ||
     phonenumber[0] !== "0" ||
-    phonenumber.match(/[^0-9]/g)
+    !phonenumber.match(/[0-9]/)
   ) {
-    return 0;
+    return false;
   } else {
-    return 1;
+    return true;
   }
 }
 
@@ -27,9 +27,9 @@ function validationPasword(password, phonenumber) {
     password === phonenumber ||
     !password.match(/^[a-zA-Z0-9]*$/)
   ) {
-    return 0;
+    return false;
   } else {
-    return 1;
+    return true;
   }
 }
 
@@ -39,11 +39,11 @@ function validationUsername(username) {
     !username ||
     username.length < 6 ||
     username.length > 30 ||
-    username.match(/^[a-zA-Z0-9_ ]*$/)
+    !username.match(/^[a-zA-Z0-9_ ]*$/)
   ) {
-    return 0;
+    return fasle;
   } else {
-    return 1;
+    return true;
   }
 }
 
